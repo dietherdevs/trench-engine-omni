@@ -2,17 +2,29 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- 📱 iOS/Mobile Optimization Meta Tag -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>TRENCH ENGINE V2 - LIVE STREAM</title>
     <style>
+        /* =========================================
+           BASE THEME (DARK MODE)
+           ========================================= */
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Courier New', Courier, monospace; }
-        body { background-color: #0b0e11; color: #eaecef; padding: 15px; }
         
-        header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1f2630; padding-bottom: 10px; margin-bottom: 15px; }
+        body { background-color: #0b0e11; color: #eaecef; padding: 15px; transition: background-color 0.3s ease; }
+        
+        header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1f2630; padding-bottom: 10px; margin-bottom: 15px; flex-wrap: wrap; gap: 10px; }
+        .header-title-group { display: flex; align-items: center; gap: 15px; }
         h1 { color: #14F195; font-size: 20px; font-weight: bold; letter-spacing: 1px; }
-        .stats-banner { display: flex; gap: 20px; font-size: 13px; color: #848e9c; }
+        
+        /* Theme Toggle Button */
+        #themeToggle { background: #12161a; border: 1px solid #1f2630; color: #848e9c; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; transition: all 0.2s; }
+        #themeToggle:hover { background: #1c242b; color: #fff; }
+
+        .stats-banner { display: flex; gap: 20px; font-size: 13px; color: #848e9c; flex-wrap: wrap; }
         .stats-banner span strong { color: #fff; }
 
+        /* Layout Grid */
         .trench-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; height: calc(100vh - 80px); }
         .column { background: #12161a; border: 1px solid #1f2630; border-radius: 6px; display: flex; flex-direction: column; overflow: hidden; }
         .column-header { background: #161a1e; padding: 12px; font-weight: bold; font-size: 14px; border-bottom: 1px solid #1f2630; display: flex; justify-content: space-between; align-items: center; }
@@ -38,6 +50,7 @@
         .grade-VERIFIED { color: #14F195; }
         .grade-CAUTION { color: #ffa500; }
         .grade-UNVERIFIED { color: #848e9c; }
+        .grade-DANGER { color: #ff4d4d; }
 
         .card-metrics { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; font-size: 11px; color: #b7bdc6; border-top: 1px dashed #232c35; border-bottom: 1px dashed #232c35; padding: 5px 0; }
         .metric-item span { color: #fff; font-weight: bold; }
@@ -46,12 +59,74 @@
         .ca-string { background: #111518; padding: 2px 4px; border-radius: 2px; color: #4ca2ff; cursor: pointer; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .action-links a { color: #14F195; text-decoration: none; margin-left: 8px; }
         .action-links a:hover { text-decoration: underline; }
+
+        /* =========================================
+           ☀️ LIGHT MODE OVERRIDES
+           ========================================= */
+        body.light-mode { background-color: #f0f2f5; color: #1a1a1a; }
+        body.light-mode header { border-bottom-color: #d1d5db; }
+        body.light-mode #themeToggle { background: #ffffff; border-color: #d1d5db; color: #4b5563; }
+        body.light-mode #themeToggle:hover { background: #e5e7eb; color: #000; }
+        body.light-mode .stats-banner { color: #4b5563; }
+        body.light-mode .stats-banner span strong { color: #000; }
+        
+        body.light-mode .column { background: #ffffff; border-color: #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        body.light-mode .column-header { background: #f9fafb; border-bottom-color: #e5e7eb; }
+        
+        body.light-mode .token-card { background: #ffffff; border-color: #e5e7eb; }
+        body.light-mode .token-card:hover { border-color: #cbd5e1; background: #f8fafc; }
+        body.light-mode .token-card.passed { background: #f0fdf4; border-left: 4px solid #14F195; }
+        
+        body.light-mode .token-name { color: #111827; }
+        body.light-mode .token-symbol { color: #6b7280; }
+        body.light-mode .score-pill { background: #e5e7eb; color: #111827; }
+        body.light-mode .card-metrics { border-top-color: #e5e7eb; border-bottom-color: #e5e7eb; color: #4b5563; }
+        body.light-mode .metric-item span { color: #111827; }
+        body.light-mode .card-footer { color: #6b7280; }
+        body.light-mode .ca-string { background: #f3f4f6; }
+
+        /* =========================================
+           📱 MOBILE & TABLET RESPONSIVENESS
+           ========================================= */
+        @media screen and (max-width: 1024px) {
+            .trench-container { 
+                display: flex; 
+                flex-direction: column; 
+                height: auto; 
+                overflow-y: auto; 
+            }
+            
+            .column { 
+                width: 100%; 
+                min-height: 400px; 
+                max-height: 50vh; /* Keeps individual columns from taking up the entire scroll view */
+                margin-bottom: 20px; 
+            }
+
+            /* Smooth momentum scrolling for iOS */
+            .token-feed { 
+                -webkit-overflow-scrolling: touch; 
+            }
+
+            /* Hide ugly scrollbars on mobile */
+            .token-feed::-webkit-scrollbar { 
+                display: none; 
+            }
+            
+            .stats-banner {
+                font-size: 11px;
+                gap: 10px;
+            }
+        }
     </style>
 </head>
 <body>
 
     <header>
-        <h1>🐊 TRENCH ENGINE DEFI LIVE TERMINAL</h1>
+        <div class="header-title-group">
+            <h1>🐊 TRENCH ENGINE DEFI LIVE TERMINAL</h1>
+            <button id="themeToggle">☀️ Light Mode</button>
+        </div>
         <div class="stats-banner" id="statsBanner">
             <span>Total Logged: <strong id="statTotal">0</strong></span>
             <span>Wins: <strong id="statWins" style="color:#14F195">0</strong></span>
@@ -81,7 +156,31 @@
     </div>
 
     <script>
-        // Setup Server-Sent Events Connection to backend pipeline
+        // ==========================================
+        // UI INTERACTIONS & THEME MANAGEMENT
+        // ==========================================
+        const themeToggleBtn = document.getElementById('themeToggle');
+        
+        // Check local storage for saved theme preference
+        if (localStorage.getItem('theme') === 'light') {
+            document.body.classList.add('light-mode');
+            themeToggleBtn.innerText = '🌙 Dark Mode';
+        }
+
+        themeToggleBtn.addEventListener('click', () => {
+            document.body.classList.toggle('light-mode');
+            if (document.body.classList.contains('light-mode')) {
+                localStorage.setItem('theme', 'light');
+                themeToggleBtn.innerText = '🌙 Dark Mode';
+            } else {
+                localStorage.setItem('theme', 'dark');
+                themeToggleBtn.innerText = '☀️ Light Mode';
+            }
+        });
+
+        // ==========================================
+        // DATA PIPELINE (SERVER-SENT EVENTS)
+        // ==========================================
         const eventSource = new EventSource('/api/stream');
         
         eventSource.onmessage = function(event) {
