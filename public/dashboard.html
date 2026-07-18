@@ -3,182 +3,165 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trench Engine V1.0 // Intelligence Terminal</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>TRENCH ENGINE V2 - LIVE STREAM</title>
     <style>
-        body { background-color: #0b0e11; color: #e3e6eb; font-family: monospace; }
-        .gmgn-card { background-color: #141a20; border: 1px solid #232d38; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Courier New', Courier, monospace; }
+        body { background-color: #0b0e11; color: #eaecef; padding: 15px; }
         
-        /* Dynamic Chain Indicators */
-        .sol-glow { color: #14F195; text-shadow: 0 0 10px rgba(20, 241, 149, 0.3); }
-        .eth-glow { color: #a4b3e6; }
-        .bsc-glow { color: #F3BA2F; }
-        .base-glow { color: #0052FF; }
-        .arb-glow { color: #28A0F0; }
-        .poly-glow { color: #8247E5; }
-        .avax-glow { color: #E84142; }
-        .opt-glow { color: #FF0420; }
-        .sui-glow { color: #4CA2FF; text-shadow: 0 0 10px rgba(76, 162, 255, 0.3); }
+        header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1f2630; padding-bottom: 10px; margin-bottom: 15px; }
+        h1 { color: #14F195; font-size: 20px; font-weight: bold; letter-spacing: 1px; }
+        .stats-banner { display: flex; gap: 20px; font-size: 13px; color: #848e9c; }
+        .stats-banner span strong { color: #fff; }
+
+        .trench-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; height: calc(100vh - 80px); }
+        .column { background: #12161a; border: 1px solid #1f2630; border-radius: 6px; display: flex; flex-direction: column; overflow: hidden; }
+        .column-header { background: #161a1e; padding: 12px; font-weight: bold; font-size: 14px; border-bottom: 1px solid #1f2630; display: flex; justify-content: space-between; align-items: center; }
+        .column-header.new { color: #4ca2ff; border-top: 3px solid #4ca2ff; }
+        .column-header.momentum { color: #ffa500; border-top: 3px solid #ffa500; }
+        .column-header.migrated { color: #14F195; border-top: 3px solid #14F195; }
+        
+        .token-feed { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 10px; }
+        
+        /* Token Card */
+        .token-card { background: #181e24; border: 1px solid #232c35; border-radius: 4px; padding: 10px; display: flex; flex-direction: column; gap: 6px; transition: all 0.2s ease; }
+        .token-card:hover { border-color: #384756; background: #1c242b; }
+        .token-card.passed { border-left: 4px solid #14F195; background: #14241c; }
+
+        .card-top { display: flex; justify-content: space-between; align-items: flex-start; }
+        .token-identity { display: flex; flex-direction: column; }
+        .token-name { font-weight: bold; font-size: 14px; color: #fff; }
+        .token-symbol { font-size: 11px; color: #848e9c; margin-top: 2px; }
+        
+        .badge-score { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+        .score-pill { font-size: 12px; font-weight: bold; padding: 2px 6px; border-radius: 3px; background: #2b3641; color: #fff; }
+        .grade-pill { font-size: 10px; font-weight: bold; text-transform: uppercase; }
+        .grade-VERIFIED { color: #14F195; }
+        .grade-CAUTION { color: #ffa500; }
+        .grade-UNVERIFIED { color: #848e9c; }
+
+        .card-metrics { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; font-size: 11px; color: #b7bdc6; border-top: 1px dashed #232c35; border-bottom: 1px dashed #232c35; padding: 5px 0; }
+        .metric-item span { color: #fff; font-weight: bold; }
+
+        .card-footer { display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: #848e9c; }
+        .ca-string { background: #111518; padding: 2px 4px; border-radius: 2px; color: #4ca2ff; cursor: pointer; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .action-links a { color: #14F195; text-decoration: none; margin-left: 8px; }
+        .action-links a:hover { text-decoration: underline; }
     </style>
 </head>
-<body class="p-6">
+<body>
 
-    <div class="flex justify-between items-center mb-8 pb-4 border-b border-gray-800">
-        <div>
-            <h1 class="text-2xl font-bold tracking-wider text-green-400">⚡ TRENCH_ENGINE_V1.0</h1>
-            <p class="text-xs text-gray-400">OMNI-CHAIN QUANTITATIVE MOMENTUM SNIPER & BACKEND AUDITOR</p>
+    <header>
+        <h1>🐊 TRENCH ENGINE DEFI LIVE TERMINAL</h1>
+        <div class="stats-banner" id="statsBanner">
+            <span>Total Logged: <strong id="statTotal">0</strong></span>
+            <span>Wins: <strong id="statWins" style="color:#14F195">0</strong></span>
+            <span>Losses: <strong id="statLosses" style="color:#ff4d4d">0</strong></span>
+            <span>Win-Rate: <strong id="statRate">0%</strong></span>
         </div>
-        <div class="text-right">
-            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-900 text-green-300 animate-pulse">
-                ● CORE TERMINAL ONLINE
-            </span>
-        </div>
-    </div>
+    </header>
 
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <div class="gmgn-card p-4 rounded-lg">
-            <p class="text-xs text-gray-400 font-bold">TOTAL TOKENS AUDITED</p>
-            <h3 id="stat-total" class="text-3xl font-bold mt-2">--</h3>
-        </div>
-        <div class="gmgn-card p-4 rounded-lg">
-            <p class="text-xs text-gray-400 font-bold">ALGO WIN RATE (30m Target)</p>
-            <h3 id="stat-winrate" class="text-3xl font-bold text-green-400 mt-2">--%</h3>
-        </div>
-        <div class="gmgn-card p-4 rounded-lg">
-            <p class="text-xs text-gray-400 font-bold">SUCCESSFUL CALLS (2x+ Mcap)</p>
-            <h3 id="stat-wins" class="text-3xl font-bold text-emerald-400 mt-2">--</h3>
-        </div>
-        <div class="gmgn-card p-4 rounded-lg">
-            <p class="text-xs text-gray-400 font-bold">ADAPTIVE PARAMETER BLOCKS</p>
-            <h3 class="text-xl font-bold text-yellow-500 mt-3">🧠 OMNI-CHAIN LEVERAGED</h3>
-        </div>
-    </div>
-
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        <div class="lg:col-span-2 gmgn-card p-4 rounded-lg">
-            <h2 class="text-sm font-bold border-b border-gray-800 pb-2 mb-4 tracking-widest text-gray-300">🛰️ REAL-TIME STREAM AUDIT RECORD</h2>
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-xs">
-                    <thead>
-                        <tr class="border-b border-gray-800 text-gray-400">
-                            <th class="pb-2">ASSET</th>
-                            <th class="pb-2">CHAIN</th>
-                            <th class="pb-2">ENTRY MCAP</th>
-                            <th class="pb-2">CURRENT MCAP</th>
-                            <th class="pb-2">ATH RECORDED</th>
-                            <th class="pb-2">ATH X</th>
-                            <th class="pb-2 text-right">OUTCOME</th>
-                        </tr>
-                    </thead>
-                    <tbody id="token-table-body">
-                        </tbody>
-                </table>
-            </div>
+    <div class="trench-container">
+        <!-- COLUMN 1: NEW -->
+        <div class="column">
+            <div class="column-header new">⚡ NEW LAUNCHES <span id="countNew" style="font-size:11px;color:#848e9c">0</span></div>
+            <div class="token-feed" id="feedNew"></div>
         </div>
 
-        <div class="gmgn-card p-4 rounded-lg flex flex-col justify-between">
-            <div>
-                <h2 class="text-sm font-bold border-b border-gray-800 pb-2 mb-4 tracking-widest text-gray-300">📊 SIGNAL QUALITY METRICS</h2>
-                <div class="w-full max-w-[250px] mx-auto pt-4">
-                    <canvas id="outcomeChart"></canvas>
-                </div>
-            </div>
-            <div class="bg-black/30 p-3 rounded text-[11px] text-gray-400 mt-4 border border-gray-800/40">
-                <span class="text-yellow-500 font-bold">SYSTEM NOTICE:</span> Streams update in real-time. Omni-chain trackers calculate raw multi-platform breakouts instantly.
-            </div>
+        <!-- COLUMN 2: MOMENTUM -->
+        <div class="column">
+            <div class="column-header momentum">🎯 MOMENTUM CLIMBERS (% MC) <span id="countMomentum" style="font-size:11px;color:#848e9c">0</span></div>
+            <div class="token-feed" id="feedMomentum"></div>
         </div>
 
+        <!-- COLUMN 3: MIGRATED -->
+        <div class="column">
+            <div class="column-header migrated">🚀 BONDED / MIGRATED <span id="countMigrated" style="font-size:11px;color:#848e9c">0</span></div>
+            <div class="token-feed" id="feedMigrated"></div>
+        </div>
     </div>
 
     <script>
-        let outcomeChart = null;
-
-        async function loadDashboardData() {
-            try {
-                // Fetch Core Counts
-                const statsRes = await fetch('/api/stats');
-                const stats = await statsRes.json();
-                
-                document.getElementById('stat-total').innerText = stats.total;
-                document.getElementById('stat-winrate').innerText = stats.winRate + '%';
-                document.getElementById('stat-wins').innerText = stats.wins;
-
-                // Fetch Streams Table records
-                const tokensRes = await fetch('/api/tokens');
-                const tokens = await tokensRes.json();
-                
-                const tbody = document.getElementById('token-table-body');
-                tbody.innerHTML = '';
-
-                tokens.forEach(token => {
-                    // Omni-Chain Glowing State Logic
-                    let chainClass = 'sol-glow';
-                    if (token.chain === 'eth') chainClass = 'eth-glow';
-                    else if (token.chain === 'bsc') chainClass = 'bsc-glow';
-                    else if (token.chain === 'base') chainClass = 'base-glow';
-                    else if (token.chain === 'arb') chainClass = 'arb-glow';
-                    else if (token.chain === 'poly') chainClass = 'poly-glow';
-                    else if (token.chain === 'avax') chainClass = 'avax-glow';
-                    else if (token.chain === 'opt') chainClass = 'opt-glow';
-                    else if (token.chain === 'sui') chainClass = 'sui-glow';
-
-                    let outcomeClass = 'text-yellow-500';
-                    if (token.outcome === 'WIN') outcomeClass = 'text-green-400 font-bold';
-                    if (token.outcome === 'LOSS') outcomeClass = 'text-red-500';
-
-                    const entryMcap = parseInt(token.market_cap || 0).toLocaleString();
-                    const currentMcap = parseInt(token.current_market_cap || token.market_cap || 0).toLocaleString();
-                    const athMcap = parseInt(token.ath_recorded || token.market_cap || 0).toLocaleString();
-                    const athX = token.ath_multiplier ? parseFloat(token.ath_multiplier).toFixed(2) : '1.00';
-
-                    const row = `
-                        <tr class="border-b border-gray-900 hover:bg-gray-800/30">
-                            <td class="py-3 font-bold text-white">${token.ticker}</td>
-                            <td class="py-3 font-bold ${chainClass}">${token.chain.toUpperCase()}</td>
-                            <td class="py-3 text-gray-400">$${entryMcap}</td>
-                            <td class="py-3 font-bold text-green-400">$${currentMcap}</td>
-                            <td class="py-3 font-bold text-blue-400">$${athMcap}</td>
-                            <td class="py-3 font-bold text-yellow-400">${athX}x</td>
-                            <td class="py-3 text-right ${outcomeClass}">${token.outcome}</td>
-                        </tr>
-                    `;
-                    tbody.innerHTML += row;
-                });
-
-                renderChart(stats.wins, stats.losses, stats.pending);
-
-            } catch (err) {
-                console.error("Dashboard Render Pipeline Interrupted:", err);
+        // Setup Server-Sent Events Connection to backend pipeline
+        const eventSource = new EventSource('/api/stream');
+        
+        eventSource.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            if (data.type === 'TOKEN_UPDATE') {
+                renderTokenCard(data.token, data.chain);
             }
+        };
+
+        function renderTokenCard(token, chain) {
+            let targetFeedId = 'feedNew';
+            
+            // Route dynamically into GMGN split structures based on data triggers
+            if (token.isMigrated || token.liquidity > 25000) {
+                targetFeedId = 'feedMigrated';
+            } else if (token.volGrowth > 1.8 || token.buyerSellerRatio > 2.0) {
+                targetFeedId = 'feedMomentum';
+            }
+
+            const feed = document.getElementById(targetFeedId);
+            
+            // Avoid duplicate card entries
+            const existingCard = document.getElementById(`card-${token.address}`);
+            if (existingCard) existingCard.remove();
+
+            const isPassed = token.compositeScore >= 75;
+            const card = document.createElement('div');
+            card.id = `card-${token.address}`;
+            card.className = `token-card ${isPassed ? 'passed' : ''}`;
+            
+            card.innerHTML = `
+                <div class="card-top">
+                    <div class="token-identity">
+                        <span class="token-name">${token.symbol || 'UNTITLED'}</span>
+                        <span class="token-symbol">${token.name || ''} [${chain.toUpperCase()}]</span>
+                    </div>
+                    <div class="badge-score">
+                        <span class="score-pill">${token.compositeScore}/100</span>
+                        <span class="grade-pill grade-${token.riskBadge || 'UNVERIFIED'}">${token.letterGrade || 'C'}</span>
+                    </div>
+                </div>
+                <div class="card-metrics">
+                    <div class="metric-item">MC: <span style="color:#ffa500">$${token.mcap ? token.mcap.toLocaleString() : '---'}</span></div>
+                    <div class="metric-item">Liq: <span>$${token.liquidity ? token.liquidity.toLocaleString() : '---'}</span></div>
+                    <div class="metric-item">B/S Ratio: <span>${token.buyerSellerRatio || '1.0'}</span></div>
+                    <div class="metric-item">Socials: <span>${token.socialScore || '---'}</span></div>
+                </div>
+                <div class="card-footer">
+                    <span class="ca-string" onclick="navigator.clipboard.writeText('${token.address}');alert('CA Copied!');">${token.address}</span>
+                    <div class="action-links">
+                        <a href="https://dexscreener.com/${chain}/${token.address}" target="_blank">Chart</a>
+                    </div>
+                </div>
+            `;
+
+            // Insert at the absolute top of the feed column
+            feed.insertBefore(card, feed.firstChild);
+
+            // Cap visible entries per column at 40 rows to prevent memory leakage
+            if (feed.children.length > 40) {
+                feed.lastChild.remove();
+            }
+
+            // Keep header badges incremented
+            document.getElementById(`count${targetFeedId.replace('feed', '')}`).innerText = feed.children.length;
         }
 
-        function renderChart(wins, losses, pending) {
-            const ctx = document.getElementById('outcomeChart').getContext('2d');
-            if (outcomeChart) outcomeChart.destroy();
-
-            outcomeChart = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['WIN', 'LOSS', 'PENDING'],
-                    datasets: [{
-                        data: [wins, losses, pending],
-                        backgroundColor: ['#10B981', '#EF4444', '#F59E0B'],
-                        borderWidth: 0
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: { labels: { color: '#8892b0', font: { family: 'monospace', size: 10 } } }
-                    }
-                }
-            });
+        // Periodically refresh header stats panels
+        async function updateStats() {
+            try {
+                const res = await fetch('/api/stats');
+                const stats = await res.json();
+                document.getElementById('statTotal').innerText = stats.total || 0;
+                document.getElementById('statWins').innerText = stats.wins || 0;
+                document.getElementById('statLosses').innerText = stats.losses || 0;
+                document.getElementById('statRate').innerText = (stats.winRate || 0) + '%';
+            } catch(e) {}
         }
-
-        loadDashboardData();
-        setInterval(loadDashboardData, 10000);
+        setInterval(updateStats, 10000);
+        updateStats();
     </script>
 </body>
 </html>

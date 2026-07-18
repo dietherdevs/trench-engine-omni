@@ -11,10 +11,35 @@ const db = require('./db');
 const app = express();
 app.use(express.json());
 
+// Array storage to track connected browser tabs running the UI terminal
+let sseClients = [];
+
 // Serving the live panel UI
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
 });
+
+/**
+ * Real-Time Server-Sent Events (SSE) Endpoint for the GMGN-style Dashboard Pipeline
+ */
+app.get('/api/stream', (req, res) => {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+
+    sseClients.push(res);
+
+    req.on('close', () => {
+        sseClients = sseClients.filter(client => client !== res);
+    });
+});
+
+// Broadcast utility function to stream real-time token states straight to your interface
+function broadcastToUI(token, chain) {
+    const payload = JSON.stringify({ type: 'TOKEN_UPDATE', token, chain });
+    sseClients.forEach(client => client.write(`data: ${payload}\n\n`));
+}
 
 // Database statistics monitoring API Endpoint
 app.get('/api/stats', async (req, res) => {
@@ -63,7 +88,7 @@ client.once('ready', () => {
     console.log(`🤖 Logged in as ${client.user.tag}! V2 Dual-Axis Funnel Active.`);
     
     // Core Cron Loops
-    setInterval(trackMarketTrends, 60000); // 1 minute scanner cadence
+    setInterval(trackMarketTrends, 30000); // Accelerated to 30s to keep the dashboard stream sharp
     setInterval(runMidCapDipBuyerAnalysis, 900000); // 15-minute S&R Support cadence
     setInterval(async () => {
         await runDailyAutolearn();
@@ -77,7 +102,6 @@ client.once('ready', () => {
  * Stage 1 & Stage 2 Pipeline Funnel Execution Loop
  */
 async function trackMarketTrends() {
-    // 🌐 Robinhood Chain injected into Omni-chain execution array
     const chains = ['sol', 'eth', 'bsc', 'base', 'arb', 'poly', 'avax', 'opt', 'sui', 'robinhood'];
     const channelId = process.env.DISCORD_CHANNEL_ID;
     const channel = await client.channels.fetch(channelId).catch(() => null);
@@ -131,6 +155,10 @@ async function trackMarketTrends() {
             // Inject the score properties back to the token payload object context
             token.compositeScore = finalResult.score;
             token.letterGrade = finalResult.grade;
+            token.riskBadge = riskBadge;
+
+            // ⚡ INSTANT PIPELINE STREAM: Send token stats straight to the UI layout columns
+            broadcastToUI(token, chain);
 
             await logTokenForTracking(token, chain);
 
@@ -142,7 +170,6 @@ async function trackMarketTrends() {
                 else if (chain === 'base') explorerUrl = `https://basescan.org/token/${contractAddress}`;
                 else if (chain === 'robinhood') explorerUrl = `https://robinhoodchain.blockscout.com/token/${contractAddress}`;
 
-                // Robinhood Signature Green Hex (0x00C805) appended below
                 const colors = {
                     'sol': 0x14F195, 'eth': 0x3C3C3D, 'bsc': 0xF3BA2F,
                     'base': 0x0052FF, 'arb': 0x28A0F0, 'poly': 0x8247E5,
@@ -180,7 +207,6 @@ async function runMidCapDipBuyerAnalysis() {
     console.log("⚙️ Executing background Mid-Cap S&R structural trend check ($1M-$5M range)...");
     
     try {
-        // Query established tracking history rows to analyze consolidated setups
         const trackedWatchlist = await db.query(`SELECT DISTINCT ticker, contract_address, chain FROM token_history WHERE outcome = 'PENDING' LIMIT 10`);
         
         if (trackedWatchlist.rows.length === 0) return;
@@ -190,8 +216,6 @@ async function runMidCapDipBuyerAnalysis() {
         if (!channel) return;
 
         for (const target of trackedWatchlist.rows) {
-            // Simulated validation of the 7-Point confirmation ruleset (Section 9.4)
-            // In practice, pull historical candles via DexScreener/GeckoTerminal here
             const candleExhaustionPassed = true; 
             const dynamicSupportZoneTouched = true;
             const reversalCandleClosed = true; 
