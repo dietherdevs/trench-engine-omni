@@ -83,4 +83,8 @@ function calculateTokenScoreV2(metrics) {
     };
 }
 
-module.exports = { calculateTokenScoreV2 };
+// Exported with backward compatibility alias to prevent downstream system crashes
+module.exports = { 
+    calculateTokenScoreV2,
+    calculateTokenScore: calculateTokenScoreV2 
+};

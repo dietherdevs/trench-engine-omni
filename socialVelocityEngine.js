@@ -8,12 +8,13 @@ async function analyzeSocialVelocity(chain, contractAddress, tokenSymbol) {
     try {
         console.log(`   -> 🐦 Analyzing social footprint for $${tokenSymbol} (${contractAddress.substring(0, 6)})...`);
 
-        // LunarCrush API call targeting the token symbol
+        // Prioritize .env key configuration, fallback to your explicit key if empty
+        const apiKey = process.env.LUNARCRUSH_API_KEY || 'y57yxw7v9zomkkci49xkco1yb8mr8vti7n7tboaim';
         const lunarCrushUrl = `https://lunarcrush.com/api4/public/coins/search?query=${tokenSymbol}`;
         
         const response = await axios.get(lunarCrushUrl, {
             headers: {
-                'Authorization': `Bearer y57yxw7v9zomkkci49xkco1yb8mr8vti7n7tboaim`
+                'Authorization': `Bearer ${apiKey}`
             }
         });
 
@@ -39,8 +40,12 @@ async function analyzeSocialVelocity(chain, contractAddress, tokenSymbol) {
 
     } catch (error) {
         console.error(`❌ LunarCrush API Error for $${tokenSymbol}:`, error.message);
-        // Fail safely and return neutral defaults if rate-limited or the token is too new
-        return { tweetMentionsGrowthPct: 0, telegramMemberGrowthCount: 0, socialScore: 50 };
+        // Fail safely and return neutral defaults if rate-limited, 404'd, or the token is too new
+        return { 
+            tweetMentionsGrowthPct: 0, 
+            telegramMemberGrowthCount: 0, 
+            socialScore: 50 
+        };
     }
 }
 
