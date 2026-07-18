@@ -13,6 +13,8 @@ app.use(express.json());
 
 // Array storage to track connected browser tabs running the UI terminal
 let sseClients = [];
+// 🧠 Memory cache to store the last 50 active tokens so the UI is never blank on load
+let recentTokensCache = []; 
 
 // Serving the live panel UI
 app.get('/', (req, res) => {
@@ -28,6 +30,11 @@ app.get('/api/stream', (req, res) => {
     res.setHeader('Connection', 'keep-alive');
     res.flushHeaders();
 
+    // 🌊 Step 1: Instantly flush out the existing active trench memory to the newly opened tab
+    recentTokensCache.forEach(item => {
+        res.write(`data: ${JSON.stringify({ type: 'TOKEN_UPDATE', token: item.token, chain: item.chain })}\n\n`);
+    });
+
     sseClients.push(res);
 
     req.on('close', () => {
@@ -37,6 +44,15 @@ app.get('/api/stream', (req, res) => {
 
 // Broadcast utility function to stream real-time token states straight to your interface
 function broadcastToUI(token, chain) {
+    // Save/Update the token context inside our rolling in-memory timeline array
+    const existingIndex = recentTokensCache.findIndex(item => item.token.address === token.address);
+    if (existingIndex !== -1) {
+        recentTokensCache[existingIndex] = { token, chain };
+    } else {
+        recentTokensCache.unshift({ token, chain });
+        if (recentTokensCache.length > 50) recentTokensCache.pop(); // Keep it strictly clamped to 50 items
+    }
+
     const payload = JSON.stringify({ type: 'TOKEN_UPDATE', token, chain });
     sseClients.forEach(client => client.write(`data: ${payload}\n\n`));
 }
@@ -88,8 +104,8 @@ client.once('ready', () => {
     console.log(`🤖 Logged in as ${client.user.tag}! V2 Dual-Axis Funnel Active.`);
     
     // Core Cron Loops
-    setInterval(trackMarketTrends, 30000); // Accelerated to 30s to keep the dashboard stream sharp
-    setInterval(runMidCapDipBuyerAnalysis, 900000); // 15-minute S&R Support cadence
+    setInterval(trackMarketTrends, 30000); // 30-second loop
+    setInterval(runMidCapDipBuyerAnalysis, 900000); 
     setInterval(async () => {
         await runDailyAutolearn();
     }, 1500000); 
@@ -117,15 +133,22 @@ async function trackMarketTrends() {
 
         for (const token of tokens) {
             const contractAddress = token.address;
-            if (seenTokens.has(contractAddress)) continue;
-
+            
             // 1. Stage 1: Noise Floor Check (Filtering Zombie Pools)
             if (!token.liquidity || token.liquidity < 500) continue; 
+
+            // If we've already tracked it and it's cached in memory, just update the UI without repeating heavy logic
+            if (seenTokens.has(contractAddress)) {
+                const cachedItem = recentTokensCache.find(item => item.token.address === contractAddress);
+                if (cachedItem) {
+                    broadcastToUI(cachedItem.token, chain);
+                }
+                continue;
+            }
 
             // 2. Run Hard-Gate V2 Disqualifier Pass
             const riskBadge = await checkTokenSecurityBadge(chain, contractAddress);
             
-            // Strictly exclude DANGER items from sniper alerts, but log metrics for tracking
             if (riskBadge === 'DANGER') {
                 seenTokens.add(contractAddress);
                 continue; 
@@ -201,14 +224,12 @@ async function trackMarketTrends() {
 }
 
 /**
- * 📈 9. Mid-Cap Support & Resistance Mode - Buy-the-Dip Confirmation Pipeline
+ * 📈 Mid-Cap Support & Resistance Mode
  */
 async function runMidCapDipBuyerAnalysis() {
     console.log("⚙️ Executing background Mid-Cap S&R structural trend check ($1M-$5M range)...");
-    
     try {
         const trackedWatchlist = await db.query(`SELECT DISTINCT ticker, contract_address, chain FROM token_history WHERE outcome = 'PENDING' LIMIT 10`);
-        
         if (trackedWatchlist.rows.length === 0) return;
 
         const channelId = process.env.DISCORD_CHANNEL_ID;
