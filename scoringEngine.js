@@ -1,59 +1,86 @@
 /**
- * Calculates a composite score from 0 to 100 for a token based on Trench Engine V1.0 metrics
+ * Calculates a composite score (0-100) and yields a letter grade & badge combo based on Trench V2 Guidelines
+ * @param {Object} metrics - Token activity and security variables
+ * @returns {Object} { score: number, grade: string, badge: string }
  */
-function calculateTokenScore(metrics) {
+function calculateTokenScoreV2(metrics) {
     let score = 0;
+    const badge = metrics.riskBadge || 'UNVERIFIED';
 
-    // 1. Phase 7: Buy Pressure (Max 25 Points)
-    const bsRatio = metrics.buySellRatio || 0;
-    if (bsRatio >= 4.0) score += 25;
-    else if (bsRatio >= 3.0) score += 20;
-    else if (bsRatio >= 2.0) score += 12;
+    // 1. Narrative / Hype Checklist Fit (Max 20 Points) [V2 Update]
+    const patternScore = metrics.narrativePatternMatchScore || 0; 
+    score += Math.min(patternScore, 20);
 
-    // 2. Phase 8: Volume Growth Velocity (Max 25 Points)
-    const growthRate = metrics.volumeGrowthRate || 1.0;
-    if (growthRate >= 2.5) score += 25; // Massive volume explosion
-    else if (growthRate >= 1.8) score += 20;
-    else if (growthRate >= 1.2) score += 15;
-    else if (growthRate > 1.0) score += 10;
+    // 2. Wallet Quality / Smart Money Clustering (Max 20 Points) [V2 Update]
+    const activeClusters = metrics.smartMoneyClusters || 0;
+    if (activeClusters >= 4) score += 20;
+    else if (activeClusters >= 2) score += 12;
+    else if (activeClusters > 0) score += 5;
 
-    // 3. Phase 3: Holder Decentralization Safety (Max 20 Points)
-    const top10 = metrics.top10Percentage || 25;
-    if (top10 < 12) score += 20;      // Highly decentralized
-    else if (top10 < 18) score += 15; // Extremely safe
-    else if (top10 < 22) score += 10; // Moderate
-    else if (top10 < 25) score += 5;  // Barely passing
+    // 3. Holder Growth Authenticity Sub-Check (Max 15 Points) [V2 Update]
+    const organicGrowthRate = metrics.organicHolderGrowthRate || 0;
+    if (organicGrowthRate >= 1.5) score += 15;
+    else if (organicGrowthRate >= 1.0) score += 10;
+    else if (organicGrowthRate >= 0.5) score += 5;
 
-    // 4. Liquidity-to-Market-Cap Health Ratio (Max 15 Points)
-    const liqToMcap = metrics.liquidity / metrics.mcap;
-    if (liqToMcap >= 0.25) score += 15; // Incredibly deep liquidity backing
-    else if (liqToMcap >= 0.15) score += 10;
-    else if (liqToMcap >= 0.08) score += 5;
+    // 4. Distribution Matrix (Max 15 Points) [V2 Update]
+    const top10Concentration = metrics.top10Percentage || 35;
+    if (top10Concentration < 12) score += 15;
+    else if (top10Concentration < 20) score += 10;
+    else if (top10Concentration < 30) score += 5;
 
-    // 5. Token Age Sweet Spot (Max 15 Points)
-    // Hyper-fresh stealth launches get premium score weight for maximum upside
-    if (metrics.age >= 2 && metrics.age <= 20) score += 15;
-    else if (metrics.age <= 60) score += 10;
-    else if (metrics.age <= 180) score += 5;
+    // 5. Buy Pressure Metrics (Max 10 Points) [V2 Update]
+    const uniqueBuyerRatio = metrics.uniqueBuyerToSellerRatio || 1.0;
+    if (uniqueBuyerRatio >= 3.0) score += 10;
+    else if (uniqueBuyerRatio >= 1.5) score += 6;
 
-    // ==========================================
-    // 🛡️ PHASE 4: SMART MONEY MULTIPLIER 🛡️
-    // Dynamically inject tracking weight bonuses
-    // ==========================================
-    const smartMoneyBonus = metrics.smartMoneyBonus || 0;
-    score += smartMoneyBonus;
+    // 6. Volume Growth Quality Pattern (Max 10 Points) [V2 Update]
+    const volVelocity = metrics.volumeGrowthRate || 1.0;
+    const pathIsOrganic = metrics.isVolumePatternOrganic !== false;
+    if (pathIsOrganic) {
+        if (volVelocity >= 2.5) score += 10;
+        else if (volVelocity >= 1.5) score += 6;
+    }
 
-    // ==========================================
-    // 🛡️ PHASE 5 & 6: NARRATIVE MULTIPLIER 🛡️
-    // Allocates points based on LunarCrush social acceleration
-    // ==========================================
-    const targetSocialScore = metrics.socialScore || 50;
-    if (targetSocialScore >= 85) score += 10;
-    else if (targetSocialScore >= 70) score += 7;
-    else if (targetSocialScore >= 50) score += 4;
+    // 7. Social Growth Tracking (Max 5 Points) [V2 Update]
+    const structuralSocialScore = metrics.socialScore || 50;
+    if (structuralSocialScore >= 75) score += 5;
+    else if (structuralSocialScore >= 50) score += 2;
 
-    // Ensure strict ceiling boundary
-    return Math.min(Math.round(score), 100);
+    // 8. Liquidity Health Scale (Max 5 Points) [V2 Update]
+    const liqToMcap = metrics.mcap > 0 ? (metrics.liquidity / metrics.mcap) : 0;
+    if (liqToMcap >= 0.20) score += 5;
+    else if (liqToMcap >= 0.10) score += 3;
+
+    // Cap structural score at 100 Max
+    const finalScore = Math.min(Math.round(score), 100);
+
+    // Calculate Dual-Axis Letter Grade Suffix Configuration
+    let baseLetter = 'F';
+    if (finalScore >= 90) baseLetter = 'S';
+    else if (finalScore >= 75) baseLetter = 'A';
+    else if (finalScore >= 60) baseLetter = 'B';
+    else if (finalScore >= 40) baseLetter = 'C';
+    else if (finalScore >= 20) baseLetter = 'D';
+
+    // Enforcement Boundary: DANGER assets cannot rank above a "C"
+    if (badge === 'DANGER') {
+        if (baseLetter === 'S' || baseLetter === 'A' || baseLetter === 'B') {
+            baseLetter = 'C';
+        }
+    }
+
+    // Formulate final visible grade string format
+    let finalGrade = baseLetter;
+    if (badge === 'CAUTION') finalGrade += ' - CAUTION';
+    else if (badge === 'DANGER') finalGrade += ' - DANGER';
+    else if (badge === 'UNVERIFIED') finalGrade += ' - UNVERIFIED';
+
+    return {
+        score: finalScore,
+        grade: finalGrade,
+        badge: badge
+    };
 }
 
-module.exports = { calculateTokenScore };
+module.exports = { calculateTokenScoreV2 };
