@@ -8,11 +8,12 @@ const { analyzeSocialVelocity } = require('./socialVelocityEngine');
 const watchlistMemory = new Map();
 
 async function fetchTrendingTokens(chain = 'sol') {
-    // 🌐 Omni-Chain Radar Mapping
+    // 🌐 Omni-Chain Radar Mapping (Fixed: Added Robinhood)
     const dexChainMap = { 
         'sol': 'solana', 'eth': 'ethereum', 'bsc': 'bsc',
         'base': 'base', 'arb': 'arbitrum', 'poly': 'polygon',
-        'avax': 'avalanche', 'opt': 'optimism', 'sui': 'sui'
+        'avax': 'avalanche', 'opt': 'optimism', 'sui': 'sui',
+        'robinhood': 'robinhood' 
     };
     const targetChain = dexChainMap[chain];
 
@@ -26,6 +27,7 @@ async function fetchTrendingTokens(chain = 'sol') {
                 .slice(0, 30); 
 
             if (chainTokens.length === 0) {
+                // This is expected for Poly, Arb, Sui, etc.
                 console.log(`ℹ️  [${chain.toUpperCase()}] No trending tokens found on DexScreener Boosts raw feed.`);
                 return [];
             }
@@ -66,7 +68,7 @@ async function fetchTrendingTokens(chain = 'sol') {
                     let minLiq = 5000;
                     if (['eth', 'sol'].includes(chain)) minLiq = 10000;
                     else if (['base', 'arb', 'bsc'].includes(chain)) minLiq = 5000;
-                    else if (['sui', 'avax', 'poly', 'opt'].includes(chain)) minLiq = 2000;
+                    else if (['sui', 'avax', 'poly', 'opt', 'robinhood'].includes(chain)) minLiq = 2000;
 
                     if (liq < minLiq) {
                         console.log(`❌ [REJECTED] $${tokenSymbol}: Low Liquidity ($${Math.floor(liq)} < $${minLiq})`);
@@ -146,11 +148,12 @@ async function fetchTrendingTokens(chain = 'sol') {
                     };
 
                     const compositeScore = calculateTokenScore(metricsPayload);
-                    token.compositeScore = compositeScore;
                     
                     console.log(`🎯 [ANALYSIS COMPLETE] $${tokenSymbol} -> Composite Score: ${compositeScore}/100`);
 
                     seenAddresses.add(contractAddress);
+                    
+                    // FIXED: Removed the ReferenceError crash and map payload strictly to what index.js expects
                     validTokens.push({
                         address: contractAddress,
                         symbol: tokenSymbol,
