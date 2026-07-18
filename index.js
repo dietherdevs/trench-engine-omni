@@ -77,7 +77,8 @@ client.once('ready', () => {
  * Stage 1 & Stage 2 Pipeline Funnel Execution Loop
  */
 async function trackMarketTrends() {
-    const chains = ['sol', 'eth', 'bsc', 'base', 'arb', 'poly', 'avax', 'opt', 'sui'];
+    // 🌐 Robinhood Chain injected into Omni-chain execution array
+    const chains = ['sol', 'eth', 'bsc', 'base', 'arb', 'poly', 'avax', 'opt', 'sui', 'robinhood'];
     const channelId = process.env.DISCORD_CHANNEL_ID;
     const channel = await client.channels.fetch(channelId).catch(() => null);
 
@@ -139,11 +140,14 @@ async function trackMarketTrends() {
                 if (chain === 'sol') explorerUrl = `https://solscan.io/token/${contractAddress}`;
                 else if (chain === 'eth') explorerUrl = `https://etherscan.io/token/${contractAddress}`;
                 else if (chain === 'base') explorerUrl = `https://basescan.org/token/${contractAddress}`;
+                else if (chain === 'robinhood') explorerUrl = `https://robinhoodchain.blockscout.com/token/${contractAddress}`;
 
+                // Robinhood Signature Green Hex (0x00C805) appended below
                 const colors = {
                     'sol': 0x14F195, 'eth': 0x3C3C3D, 'bsc': 0xF3BA2F,
                     'base': 0x0052FF, 'arb': 0x28A0F0, 'poly': 0x8247E5,
-                    'avax': 0xE84142, 'opt': 0xFF0420, 'sui': 0x4CA2FF
+                    'avax': 0xE84142, 'opt': 0xFF0420, 'sui': 0x4CA2FF,
+                    'robinhood': 0x00C805
                 };
 
                 const embed = new EmbedBuilder()

@@ -8,7 +8,8 @@ const chainIdMap = {
     'arb': '42161',
     'poly': '137',
     'avax': '43114',
-    'opt': '10'
+    'opt': '10',
+    'robinhood': '4663' 
 };
 
 /**
