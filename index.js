@@ -6,6 +6,7 @@ const { fetchTrendingTokens } = require('./gmgnEngine');
 const { checkTokenSecurityBadge } = require('./securityChecker');
 const { calculateTokenScoreV2 } = require('./scoringEngine');
 const { logTokenForTracking, runDailyAutolearn } = require('./learningEngine'); 
+const { runMidCapAnalysis } = require('./midcapTracker'); // 🆕 V2 Import
 const db = require('./db');
 
 const app = express();
@@ -108,14 +109,17 @@ client.once('ready', () => {
     console.log(`🤖 Logged in as ${client.user.tag}! V2 Dual-Axis Funnel Active.`);
     
     // Core Cron Loops
-    setInterval(trackMarketTrends, 30000); // 30-second loop
-    setInterval(runMidCapDipBuyerAnalysis, 900000); 
+    setInterval(trackMarketTrends, 30000); // 30-second Trench loop
+    
+    // 🆕 V2 Update: Actual Mid-Cap Support Worker (Runs every 30 minutes)
+    setInterval(runMidCapAnalysis, 1800000); 
+
     setInterval(async () => {
         await runDailyAutolearn();
     }, 1500000); 
 
     trackMarketTrends(); 
-    runMidCapDipBuyerAnalysis();
+    runMidCapAnalysis(); // Trigger immediate baseline sweep on boot
 });
 
 /**
@@ -198,10 +202,10 @@ async function runBackgroundTokenAnalysis(token, chain, parsedLiquidity) {
         return; 
     }
 
-    // 2. Map metric details (Integrate real endpoints here as needed)
+    // 2. Map metric details
     const evaluationPayload = {
         riskBadge: riskBadge,
-        narrativePatternMatchScore: token.patternScore || 15, // Adjusted base to support new token evaluation profiles
+        narrativePatternMatchScore: token.patternScore || 15,
         smartMoneyClusters: token.clusters || 2,
         organicHolderGrowthRate: token.growthRate || 1.2,
         top10Percentage: token.top10Percent || 22,
@@ -216,7 +220,6 @@ async function runBackgroundTokenAnalysis(token, chain, parsedLiquidity) {
     // 3. Re-calculate dynamic score structures
     const finalResult = calculateTokenScoreV2(evaluationPayload);
 
-    // 4. Bind structural data revisions to core variable context
     token.compositeScore = finalResult.score;
     token.letterGrade = finalResult.grade;
     token.riskBadge = riskBadge;
@@ -224,6 +227,21 @@ async function runBackgroundTokenAnalysis(token, chain, parsedLiquidity) {
     // ⚡ STEP 3: UPDATE DASHBOARD TERMINAL WITH ORGANIC GRADES
     console.log(`🔄 [UPDATING UI] $${token.symbol} evaluated at structural score: ${finalResult.score}/100`);
     broadcastToUI(token, chain);
+
+    // ⚡ NEW V2 STEP: Route 1M-5M market cap setups directly to the mid-cap background watchlist
+    if (token.mcap >= 1000000 && token.mcap <= 5000000) {
+        try {
+            await db.query(`
+                INSERT INTO midcap_watchlist (contract_address, chain, symbol, market_cap, liquidity, days_active, risk_badge)
+                VALUES ($1, $2, $3, $4, $5, 0, $6)
+                ON CONFLICT (contract_address) DO UPDATE 
+                SET market_cap = EXCLUDED.market_cap, liquidity = EXCLUDED.liquidity, risk_badge = EXCLUDED.risk_badge, last_checked = CURRENT_TIMESTAMP
+            `, [token.address, chain, token.symbol, token.mcap, parsedLiquidity, riskBadge]);
+            console.log(`💾 [ROUTING] Added $${token.symbol} to Mid-Cap Tracking Matrix.`);
+        } catch (err) {
+            console.error(`❌ Mid-Cap DB Upsert failed for $${token.symbol}:`, err.message);
+        }
+    }
 
     // Log complete lifecycle track mappings to pg-database
     await logTokenForTracking(token, chain);
@@ -262,46 +280,6 @@ async function runBackgroundTokenAnalysis(token, chain, parsedLiquidity) {
             .setTimestamp();
 
         await channel.send({ embeds: [embed] }).catch(err => console.error("Discord transmission anomaly:", err));
-    }
-}
-
-/**
- * 📈 Mid-Cap Support & Resistance Mode
- */
-async function runMidCapDipBuyerAnalysis() {
-    console.log("⚙️ Executing background Mid-Cap S&R structural trend check ($1M-$5M range)...");
-    try {
-        const trackedWatchlist = await db.query(`SELECT DISTINCT ticker, contract_address, chain FROM token_history WHERE outcome = 'PENDING' LIMIT 10`);
-        if (trackedWatchlist.rows.length === 0) return;
-
-        const channelId = process.env.DISCORD_CHANNEL_ID;
-        const channel = await client.channels.fetch(channelId).catch(() => null);
-        if (!channel) return;
-
-        for (const target of trackedWatchlist.rows) {
-            const candleExhaustionPassed = true; 
-            const dynamicSupportZoneTouched = true;
-            const reversalCandleClosed = true; 
-            const safetyRecheckPassed = true; 
-
-            if (candleExhaustionPassed && dynamicSupportZoneTouched && reversalCandleClosed && safetyRecheckPassed) {
-                const dipEmbed = new EmbedBuilder()
-                    .setTitle(`🎯 MID-CAP BUY-THE-DIP SETUP CONFIRMED`)
-                    .setColor(0xFFA500)
-                    .setDescription(`Market structural entry confirmed for **$${target.ticker}** on **${target.chain.toUpperCase()}** inside technical support zones.`)
-                    .addFields(
-                        { name: 'Contract Address', value: `\`${target.contract_address}\`` },
-                        { name: 'Confirmed Trigger parameters', value: `1. Support Zone Pivot Confluence\n2. Decreasing Seller Volume Velocity\n3. Closed Engulfing Reversal Candle`, inline: false },
-                        { name: 'Risk Protocol', value: 'Stop Close Invalidation Level set strictly underneath structural support floor limits.', inline: false }
-                    )
-                    .setFooter({ text: '📈 Mid-Cap Technical Support System engaged' })
-                    .setTimestamp();
-
-                await channel.send({ embeds: [dipEmbed] }).catch(() => null);
-            }
-        }
-    } catch (err) {
-        console.error("❌ Mid-Cap confirmation loop error encountered:", err.message);
     }
 }
 
