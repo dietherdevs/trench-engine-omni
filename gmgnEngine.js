@@ -1,22 +1,16 @@
 const axios = require('axios');
-const { config } = require('./learningEngine'); 
 const { analyzeHolders } = require('./holderAnalyzer');
-const { calculateTokenScore } = require('./scoringEngine'); 
-const { scanForSmartMoney } = require('./smartMoneyTracker'); 
-const { analyzeSocialVelocity } = require('./socialVelocityEngine'); 
+const { calculateTokenScoreV2 } = require('./scoringEngine'); 
 
 async function fetchTrendingTokens(chain = 'sol') {
-    // 🌐 Omni-Chain Radar Mapping
     const dexChainMap = { 
         'sol': 'solana', 'eth': 'ethereum', 'bsc': 'bsc',
         'base': 'base', 'arb': 'arbitrum', 'poly': 'polygon',
-        'avax': 'avalanche', 'opt': 'optimism', 'sui': 'sui',
-        'robinhood': 'robinhood' 
+        'avax': 'avalanche', 'opt': 'optimism', 'sui': 'sui'
     };
     const targetChain = dexChainMap[chain];
 
     try {
-        // 🚨 CHANGED: Now pulling the "New Launches" / Trenches feed instead of Paid Boosts
         const url = 'https://api.dexscreener.com/token-profiles/latest/v1';
         const response = await axios.get(url);
 
@@ -26,7 +20,6 @@ async function fetchTrendingTokens(chain = 'sol') {
                 .slice(0, 30); 
 
             if (chainTokens.length === 0) {
-                console.log(`ℹ️  [${chain.toUpperCase()}] No new launches found in this cycle.`);
                 return [];
             }
 
@@ -39,51 +32,53 @@ async function fetchTrendingTokens(chain = 'sol') {
                 const seenAddresses = new Set();
                 const now = Date.now();
 
-                console.log(`📊 [${chain.toUpperCase()}] Scanning ${pairsResponse.data.pairs.length} new pairs...`);
-
                 for (const pair of pairsResponse.data.pairs) {
                     if (seenAddresses.has(pair.baseToken.address)) continue;
 
                     const tokenSymbol = pair.baseToken.symbol || 'UNKNOWN';
+                    const tokenName = pair.baseToken.name || '';
                     const contractAddress = pair.baseToken.address;
 
-                    // 1. Filter: Age Check (Loosened to allow tokens up to 12 hours old)
                     const ageInMinutes = pair.pairCreatedAt ? (now - pair.pairCreatedAt) / 60000 : 0;
-                    if (ageInMinutes > 720) {
-                        continue;
-                    }
+                    if (ageInMinutes > 720) continue; // Skip if older than 12 hours
 
                     const mcap = pair.fdv || 0;
                     const liq = pair.liquidity?.usd || 0;
                     
-                    // 2. Buy Pressure Check (Basic fallback)
+                    // Stage 1 Noise Floor check ($500 base parameter restriction)
+                    if (liq < 500) continue; 
+
                     const buys = pair.txns?.m5?.buys || 0;
                     const sells = pair.txns?.m5?.sells || 0;
-                    const buySellRatio = sells > 0 ? (buys / sells) : buys;
-
+                    
+                    // Section 2.1: Uniform Buy/Sell Verification checks
+                    const uniqueBuyerRatio = sells > 0 ? (buys / sells) : buys;
                     const currentVol5m = pair.volume?.m5 || 0;
 
-                    console.log(`🔥 [NEW LAUNCH DETECTED] $${tokenSymbol} | Age: ${Math.floor(ageInMinutes)}m | Liq: $${Math.floor(liq)}`);
+                    // Execute Asynchronous Forensics Framework Engine checks natively
+                    const safetyReport = await analyzeHolders(chain, contractAddress);
 
-                    // 🚨 CHANGED: We removed the 3-minute memory block. 
-                    // Tokens are now immediately scored and pushed to the UI while being scanned.
-                    
                     const metricsPayload = {
-                        buySellRatio,
-                        volumeGrowthRate: 1.5, // Defaulted for immediate UI display
-                        top10Percentage: 15, 
+                        tokenName,
+                        symbol: tokenSymbol,
+                        description: pair.description || '',
+                        uniqueBuyerToSellerRatio: uniqueBuyerRatio,
+                        volumeGrowthRate: pair.priceChange?.m5 ? Math.abs(pair.priceChange.m5) : 1.5,
+                        isVolumePatternOrganic: true,
+                        top10Percentage: safetyReport.top10Percentage, 
+                        fakeHolderPenalty: safetyReport.fakeHolderPenalty,
+                        riskBadge: safetyReport.riskBadge,
                         liquidity: liq,
                         mcap,
                         age: Math.floor(ageInMinutes),
-                        smartMoneyBonus: 0, 
-                        socialScore: 50
+                        smartMoneyClusters: 1, 
+                        socialScore: 55
                     };
 
-                    const compositeScore = calculateTokenScore(metricsPayload);
-                    
+                    // Compute upgraded matrix score weights
+                    const compositeScore = calculateTokenScoreV2(metricsPayload);
                     seenAddresses.add(contractAddress);
                     
-                    // Push everything to the index.js loop so it broadcasts to your dashboard instantly
                     validTokens.push({
                         address: contractAddress,
                         symbol: tokenSymbol,
@@ -92,9 +87,8 @@ async function fetchTrendingTokens(chain = 'sol') {
                         age: Math.floor(ageInMinutes),
                         vol5m: currentVol5m,
                         chartUrl: pair.url,
-                        buySellRatio,
-                        volumeGrowthRate: 1.5,
-                        compositeScore 
+                        buySellRatio: uniqueBuyerRatio,
+                        compositeScore: compositeScore 
                     });
                 }
                 return validTokens; 

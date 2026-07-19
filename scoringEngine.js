@@ -8,7 +8,11 @@ function calculateTokenScoreV2(metrics) {
     const badge = metrics.riskBadge || 'UNVERIFIED';
 
     // 1. Narrative / Hype Checklist Fit (Max 20 Points) [V2 Update]
-    const patternScore = metrics.narrativePatternMatchScore || 0; 
+    // Uses structural keyword evaluation if plain score isn't provided directly
+    let patternScore = metrics.narrativePatternMatchScore || 0;
+    if (!metrics.narrativePatternMatchScore && (metrics.tokenName || metrics.symbol)) {
+        patternScore = calculateNarrativePatternScore(metrics.tokenName || '', metrics.description || '');
+    }
     score += Math.min(patternScore, 20);
 
     // 2. Wallet Quality / Smart Money Clustering (Max 20 Points) [V2 Update]
@@ -52,8 +56,12 @@ function calculateTokenScoreV2(metrics) {
     if (liqToMcap >= 0.20) score += 5;
     else if (liqToMcap >= 0.10) score += 3;
 
-    // Cap structural score at 100 Max
-    const finalScore = Math.min(Math.round(score), 100);
+    // Apply Wash Trading & Fake Holder Hard Penalties if flagged upstream
+    if (metrics.washTradingPenalty) score -= metrics.washTradingPenalty;
+    if (metrics.fakeHolderPenalty) score -= metrics.fakeHolderPenalty;
+
+    // Cap structural score between 0 and 100
+    const finalScore = Math.max(0, Math.min(Math.round(score), 100));
 
     // Calculate Dual-Axis Letter Grade Suffix Configuration
     let baseLetter = 'F';
@@ -64,10 +72,8 @@ function calculateTokenScoreV2(metrics) {
     else if (finalScore >= 20) baseLetter = 'D';
 
     // Enforcement Boundary: DANGER assets cannot rank above a "C"
-    if (badge === 'DANGER') {
-        if (baseLetter === 'S' || baseLetter === 'A' || baseLetter === 'B') {
-            baseLetter = 'C';
-        }
+    if (badge === 'DANGER' && ['S', 'A', 'B'].includes(baseLetter)) {
+        baseLetter = 'C';
     }
 
     // Formulate final visible grade string format
@@ -83,7 +89,33 @@ function calculateTokenScoreV2(metrics) {
     };
 }
 
-// Exported with backward compatibility alias to prevent downstream system crashes
+/**
+ * Section 3 Checklist: Evaluates qualitative pattern metadata matching internet-native cultural standards
+ */
+function calculateNarrativePatternScore(name, description) {
+    let narrativePts = 0;
+    const cleanText = `${name} ${description}`.toLowerCase();
+
+    // A & B: Culturally established equities / Zero Explanation concepts (PEPE, WIF, DOGE style)
+    const tier1Anchors = ['doge', 'pepe', 'wif', 'bonk', 'hat', 'cat', 'frog', 'trump', 'biden'];
+    if (tier1Anchors.some(anchor => cleanText.includes(anchor))) {
+        narrativePts += 15;
+    }
+
+    // C: Remixability Indicator (Simple punchy assets outperform over-engineered lore)
+    if (description.length > 0 && description.length < 120) {
+        narrativePts += 5;
+    }
+
+    // G: "Next X" Pitch/Complex Roadmaps or Utility promises (Highly Predictive Scams)
+    const marketingGimmicks = ['the next', 'utility', 'roadmap', 'presale', '1000x', 'gems', 'passive income'];
+    if (marketingGimmicks.some(gimmick => cleanText.includes(gimmick))) {
+        narrativePts -= 15;
+    }
+
+    return Math.max(0, narrativePts);
+}
+
 module.exports = { 
     calculateTokenScoreV2,
     calculateTokenScore: calculateTokenScoreV2 
